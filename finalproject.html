@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            background-color: #f4f4f4;
+            overflow: hidden; /* Prevent scrollbars from fireworks */
+        }
+        input {
+            padding: 10px;
+            font-size: 16px;
+            margin-top: 10px;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            width: 80%;
+            max-width: 300px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .rules-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            display: inline-block;
+            margin-top: 20px;
+            text-align: left;
+            width: 80%;
+            max-width: 500px;
+            max-height: 500px; /* Set a fixed height for the container */
+            overflow-y: auto; /* Enable vertical scrolling */
+        }
+        .rule {
+            font-weight: bold;
+            padding: 5px;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+            display: none;
+        }
+        .valid {
+            color: green;
+            background-color: #d4edda;
+        }
+        .invalid {
+            color: red;
+            background-color: #f8d7da;
+        }
+
+        /* Firework styles */
+        .firework {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #ff0;
+            border-radius: 50%;
+            animation: explode 1s ease-out forwards;
+        }
+
+        @keyframes explode {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(10);
+                opacity: 0;
+            }
+        }
+
+        /* Intro screen styles */
+        .intro-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #6a11cb, #2575fc);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 1000;
+            animation: fadeOut 1s ease-in-out 2s forwards;
+        }
+        .intro-text {
+            font-size: 3rem;
+            font-weight: bold;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            animation: popUp 1s ease-in-out;
+        }
+
+        @keyframes popUp {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeOut {
+            0% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+                visibility: hidden;
+            }
+        }
+
+        /* Captcha styles */
+        .captcha {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 20px;
+            font-weight: bold;
+            letter-spacing: 5px;
+            background: #e0e0e0;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px auto;
+            display: inline-block;
+        }
+
+        /* Reload button */
+        .reload-btn {
+            cursor: pointer;
+            background-color: #ff9800;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            margin-left: 10px;
+            font-size: 16px;
+        }
+
+        /* Style to highlight valid chemical symbol */
+        .highlight-symbol {
+            color: #ff5722; /* Highlight color */
+            font-weight: bold;
+            background-color: #fff3e0; /* Background color */
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+
+        /* Style for Rule 11 slider */
+        #strengthSlider {
+            width: 80%;
+            max-width: 300px;
+            margin-top: 10px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            cursor: pointer;
+        }
+
+        #sliderValue {
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Intro Screen -->
+    <div class="intro-screen">
+        <div class="intro-text">The Password Game</div>
+    </div>
+
+    <!-- Game Content -->
+    <div id="game-content" style="display: none;">
+        <h1>Password Game</h1>
+        <input type="text" id="password" placeholder="Enter password" oninput="checkPassword()">
+        <div class="rules-container">
+            <p class="rule invalid" id="rule1" style="display: block;">Rule 1: Your password must be at least 5 characters long.</p>
+            <p class="rule invalid" id="rule2">Rule 2: Your password must contain at least one number.</p>
+            <p class="rule invalid" id="rule3">Rule 3: Your password must contain at least one uppercase letter.</p>
+            <p class="rule invalid" id="rule4">Rule 4: Your password must contain at least one special symbol.</p>
+            <p class="rule invalid" id="rule5">Rule 5: The sum of all numbers in your password must be 36.</p>
+            <p class="rule invalid" id="rule6">Rule 6: Your password must contain the name of any month (case insensitive).</p>
+            <p class="rule invalid" id="rule7">Rule 7: Your password must contain today's Wordle answer.</p>
+            <p class="rule invalid" id="rule8">Rule 8: Your password must contain the emoji of the current moon phase.</p>
+            <p class="rule invalid" id="rule9">Rule 9: Your password must contain the following captcha: <span class="captcha" id="captcha"></span>
+                <button class="reload-btn" onclick="reloadCaptcha()">🔄</button></p>
+            <p class="rule invalid" id="rule10">Rule 10: Your password must contain a two-letter chemical symbol of any element from the Periodic Table.</p>
+            <p class="rule invalid" id="rule11" style="display: none;">Rule 11: Make the password stronger (Use: 🏋️‍♂️)
+                <br>
+                <input type="range" id="strengthSlider" min="0" max="4" value="0" disabled>
+                <span id="sliderValue">0</span> / 4
+            </p>
+        </div>
+    </div>
+
+    <script>
+        let fireworkInterval;
+        let clearedRules = [false, false, false, false, false, false, false, false, false, false]; // Track if rules have been cleared
+        let moonEmoji = ''; // Store the moon phase emoji for Rule 8
+        let captchaText = generateCaptcha(); // Generate a random captcha for Rule 9
+        let validChemicalSymbol = ''; // Store the valid chemical symbol for Rule 10
+        let strength = 0; // To track the number of 🏋️‍♂️ emojis in the password
+
+        // Function to generate a random captcha
+        function generateCaptcha() {
+            const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            let captcha = '';
+            for (let i = 0; i < 6; i++) {
+                captcha += characters.charAt(Math.floor(Math.random() * characters.length));
+            }
+            return captcha;
+        }
+
+        // Reload the captcha when the button is clicked
+        function reloadCaptcha() {
+            captchaText = generateCaptcha(); // Generate a new captcha
+            document.getElementById('captcha').textContent = captchaText; // Update the captcha display
+        }
+
+        // List of valid chemical symbols (two-letter) from the Periodic Table
+        const chemicalSymbols = [
+            "Ac", "Ag", "Al", "Am", "Ar", "As", "At", "Au", "Ba", "Be", "Bh", "Bi", "Bk", "Br", "Ca", "Cd", "Ce", "Cf", "Cl", "Cm", "Cn", "Co", "Cr", "Cs", "Cu", "Dy", "Er", "Es", "Eu", "Fe", "Fl", "Fm", "Fr", "Ga", "Gd", "Ge","He", "Hf", "Hg", "Ho", "Hs", "In", "Ir", "K", "Kr", "La", "Li", "Lr", "Lu", "Lv", "Mc", "Md", "Mg", "Mn", "Mo", "Mt", "Na", "Nb", "Nd", "Ne", "Nh", "Ni", "Np", "Os", "Pa", "Pb", "Pd", "Pm", "Po", "Pr", "Pt", "Pu", "Ra", "Rb", "Re", "Rf", "Rg", "Rh", "Rn", "Ru", "Sb", "Sc", "Se", "Si", "Sm", "Sn", "Sr", "Ta", "Tb", "Tc", "Te", "Th", "Ti", "Tl", "Tm", "Xe", "Yb", "Zn", "Zr"
+        ];
+
+        // Function to check for two-letter chemical symbol in password (Rule 10)
+        function containsChemicalSymbol(password) {
+            for (let symbol of chemicalSymbols) {
+                if (password.includes(symbol)) {
+                    validChemicalSymbol = symbol; // Store the valid chemical symbol
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // Function to create fireworks
+        function createFireworks() {
+            const colors = ['#ff0', '#f00', '#0f0', '#00f', '#f0f']; // Firework colors
+            const numFireworks = 5; // Number of fireworks per interval
+
+            for (let i = 0; i < numFireworks; i++) {
+                const firework = document.createElement('div');
+                firework.classList.add('firework');
+                firework.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                firework.style.left = `${Math.random() * 100}vw`; // Random horizontal position
+                firework.style.top = `${Math.random() * 100}vh`; // Random vertical position
+                document.body.appendChild(firework);
+
+                // Remove the firework element after the animation ends
+                firework.addEventListener('animationend', () => {
+                    firework.remove();
+                });
+            }
+        }
+
+        // Function to start fireworks for 1 second
+        function startFireworks() {
+            if (fireworkInterval) {
+                clearInterval(fireworkInterval); // Clear any existing interval
+            }
+            fireworkInterval = setInterval(createFireworks, 200); // Create fireworks every 200ms
+            setTimeout(() => {
+                clearInterval(fireworkInterval); // Stop fireworks after 1 second
+            }, 1000);
+        }
+
+        // Get today's Wordle answer
+        function fetchWordleAnswer() {
+            const today = new Date();
+            const formattedDate = today.toISOString().split('T')[0];
+            const url = `https://www.nytimes.com/svc/wordle/v2/${formattedDate}.json`;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    const todaysWordleAnswer = data.solution;
+                    console.log("Today's Wordle Answer:", todaysWordleAnswer);
+                    addRule7(todaysWordleAnswer);
+                })
+                .catch(error => console.error("Error fetching Wordle answer:", error));
+        }
+
+        // Apply Rule 7
+        function addRule7(wordleAnswer) {
+            const rule7 = document.getElementById('rule7');
+            rule7.textContent = `Rule 7: Your password must contain today's Wordle answer: ${wordleAnswer}`;
+        }
+
+        // Extract Moon Phase
+        function fetchMoonPhase() {
+            const url = 'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/Bangalore?unitGroup=metric&key=3AXN64LNQT4U5J7YWKHQAVPJ9&contentType=json';
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    const moonPhase = data.currentConditions.moonphase;
+                    const moonPhaseName = getMoonPhase(moonPhase);
+                    moonEmoji = getMoonPhaseEmoji(moonPhase); // Store the moon emoji for Rule 8
+                })
+                .catch(error => console.error("Error fetching moon phase:", error));
+        }
+
+        // Determine the moon phase name
+        function getMoonPhase(phaseValue) {
+            if (phaseValue === 0) {
+                return "New Moon";
+            } else if (phaseValue > 0 && phaseValue <= 0.25) {
+                return "Waxing Crescent";
+            } else if (phaseValue === 0.25) {
+                return "First Quarter";
+            } else if (phaseValue > 0.25 && phaseValue <= 0.5) {
+                return "Waxing Gibbous";
+            } else if (phaseValue === 0.5) {
+                return "Full Moon";
+            } else if (phaseValue > 0.5 && phaseValue <= 0.75) {
+                return "Waning Gibbous";
+            } else if (phaseValue === 0.75) {
+                return "Last Quarter";
+            } else if (phaseValue > 0.75 && phaseValue < 1) {
+                return "Waning Crescent";
+            } else {
+                return "Invalid moon phase value";
+            }
+        }
+
+        // Map moon phases to emojis
+        function getMoonPhaseEmoji(phaseValue) {
+            if (phaseValue === 0) {
+                return "🌑"; // New Moon
+            } else if (phaseValue > 0 && phaseValue <= 0.25) {
+                return "🌒"; // Waxing Crescent
+            } else if (phaseValue === 0.25) {
+                return "🌓"; // First Quarter
+            } else if (phaseValue > 0.25 && phaseValue <= 0.5) {
+                return "🌔"; // Waxing Gibbous
+            } else if (phaseValue === 0.5) {
+                return "🌕"; // Full Moon
+            } else if (phaseValue > 0.5 && phaseValue <= 0.75) {
+                return "🌖"; // Waning Gibbous
+            } else if (phaseValue === 0.75) {
+                return "🌗"; // Last Quarter
+            } else if (phaseValue > 0.75 && phaseValue < 1) {
+                return "🌘"; // Waning Crescent
+            } else {
+                return "❓"; // Unknown
+            }
+        }
+
+        // Password validation logic
+        function checkPassword() {
+            let password = document.getElementById('password').value;
+            let rules = [
+                document.getElementById('rule1'),
+                document.getElementById('rule2'),
+                document.getElementById('rule3'),
+                document.getElementById('rule4'),
+                document.getElementById('rule5'),
+                document.getElementById('rule6'),
+                document.getElementById('rule7'),
+                document.getElementById('rule8'),
+                document.getElementById('rule9'),
+                document.getElementById('rule10'),
+                document.getElementById('rule11') // Include Rule 11 here
+            ];
+
+            // List of months for Rule 6
+            const months = [
+                'january', 'february', 'march', 'april', 'may', 'june',
+                'july', 'august', 'september', 'october', 'november', 'december'
+            ];
+
+            let validations = [
+                password.length >= 5,
+                /[0-9]/.test(password),
+                /[A-Z]/.test(password),
+                /[^a-zA-Z0-9]/.test(password),
+                (password.match(/[0-9]/g) || []).reduce((acc, num) => acc + parseInt(num), 0) === 36,
+                months.some(month => password.toLowerCase().includes(month)),
+                /BONUS/i.test(password),  // This checks for today's Wordle answer, change if using dynamic API data
+                password.includes(moonEmoji), // Rule 8: Check if password contains the moon phase emoji
+                password.includes(captchaText), // Rule 9: Check if password contains the captcha text
+                containsChemicalSymbol(password), // Rule 10: Check if password contains a two-letter chemical symbol
+                strength === 4 // Rule 11: Check if password has 4 🏋️‍♂️ emojis
+            ];
+
+            let allPreviousValid = true;
+            for (let i = 0; i < rules.length; i++) {
+                if (allPreviousValid && validations[i]) {
+                    rules[i].classList.replace("invalid", "valid");
+                    if (i === 9 && validChemicalSymbol) {
+                        rules[i].innerHTML = `Rule 10: Your password must contain a two-letter chemical symbol of any element from the Periodic Table. Valid symbol: <span class="highlight-symbol">${validChemicalSymbol}</span>`;
+                    }
+                    if (i < rules.length - 1) {
+                        rules[i + 1].style.display = "block";
+                    }
+                    if (!clearedRules[i]) {
+                        startFireworks();
+                        clearedRules[i] = true;
+                    }
+                } else {
+                    rules[i].classList.replace("valid", "invalid");
+                    allPreviousValid = false;
+                    for (let j = i + 1; j < rules.length; j++) {
+                        rules[j].style.display = "none";
+                        rules[j].classList.replace("valid", "invalid");
+                    }
+                    break;
+                }
+            }
+
+            // Check strength for Rule 11
+            checkStrength(password);
+        }
+
+        // Function to check for 🏋️‍♂️ emojis in password (Rule 11)
+        function checkStrength(password) {
+            const emojiCount = (password.match(/🏋️‍♂️/g) || []).length;
+            strength = emojiCount; // Update strength
+
+            // Update slider value and display
+            document.getElementById('strengthSlider').value = strength;
+            document.getElementById('sliderValue').textContent = strength; // Update slider display
+
+            // Check if Rule 11 is completed (4 emojis)
+            const rule11 = document.getElementById('rule11');
+            if (strength === 4) {
+                rule11.classList.replace("invalid", "valid");
+            } else {
+                rule11.classList.replace("valid", "invalid");
+            }
+        }
+
+        // Show game content after intro screen
+        setTimeout(() => {
+            document.querySelector('.intro-screen').style.display = 'none';
+            document.getElementById('game-content').style.display = 'block';
+            document.getElementById('captcha').textContent = captchaText; // Display the captcha
+            fetchWordleAnswer(); // Fetch today's Wordle answer on page load
+            fetchMoonPhase(); // Fetch moon phase data on page load
+        }, 4000); // 4 seconds delay for intro screen
+    </script>
+</body>
+</html>
